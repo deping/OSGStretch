@@ -108,3 +108,18 @@ osg::Vec2d Nearest(const osg::Vec2d & p, const osg::Vec2d & s, const osg::Vec2d 
     }
     return res;
 }
+
+bool IsMatrixSamePlane(const osg::Matrix & m1, const osg::Matrix & m2)
+{
+    osg::Matrix x1(m1);
+    x1.setTrans(0, 0, 0);
+    //x1(3, 0) = 0;
+    //x1(3, 1) = 0;
+    //x1(3, 2) = 0;
+    osg::Matrix x2(m2);
+    x2.setTrans(0, 0, 0);
+    //x2(3, 0) = 0;
+    //x2(3, 1) = 0;
+    //x2(3, 2) = 0;
+    return x1 == x2;
+}

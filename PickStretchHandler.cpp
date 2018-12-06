@@ -6,6 +6,7 @@
 #include "IPlanarCurve.h"
 #include "PointIntersector.h"
 #include "CurveIntersector.h"
+#include "ControlPointsInViewportIntersector.h"
 #include "OsgControlPoints.h"
 
 
@@ -53,6 +54,7 @@ bool PickStretchHandler::handle(const osgGA::GUIEventAdapter& ea, osgGA::GUIActi
             if (pick(view, ea))
             {
                 _mode = EditMode::DragPoint;
+                CollectControlPointsInViewport();
                 cloneDraggedObject();
                 return true;
             }
@@ -110,9 +112,9 @@ bool PickStretchHandler::pick(osgViewer::View* view, const osgGA::GUIEventAdapte
         return false;
     if (!cam->getViewport())
         return false;
+    osg::Matrix VPW = VPWmatrix(cam);
     if (!m_gripPoints->_selectionSet.empty())
     {
-        osg::Matrix VPW = VPWmatrix(cam);
         PointIntersector pointPicker(ea.getX(), ea.getY(), _offset);
         bool hit = pointPicker.intersect(VPW, m_gripPoints.get());
         // If any control point is hit, return in order not to select curve.
@@ -128,7 +130,7 @@ bool PickStretchHandler::pick(osgViewer::View* view, const osgGA::GUIEventAdapte
         return false;
 
     CurveIntersector::Intersections selectionSet;
-    osg::ref_ptr<CurveIntersector> curvePicker = new CurveIntersector(selectionSet, ea.getX(), ea.getY(), _offset);
+    osg::ref_ptr<CurveIntersector> curvePicker = new CurveIntersector(selectionSet, VPW, ea.getX(), ea.getY(), _offset);
     osgUtil::IntersectionVisitor iv(curvePicker.get());
     iv.pushWindowMatrix(cam->getViewport());
     iv.pushViewMatrix(new osg::RefMatrix(cam->getViewMatrix()));
@@ -191,10 +193,11 @@ void PickStretchHandler::stretch(osgViewer::View * view, const osgGA::GUIEventAd
             osg::Matrix invM = osg::Matrix::inverse(m);
             pos = pos * invM;
             osg::Vec2d tmp(pos.x(), pos.y());
+            SnapPoint(tmp, it->first, m, invM, VPW, invVPW);
             if (clone)
-                dynamic_cast<IPlanarCurve*>(info.clone.get())->stretch(info.index, tmp);
+                dynamic_cast<IPlanarCurve*>(info.clone.get())->stretch(info.index, tmp, ea);
             else
-                dynamic_cast<IPlanarCurve*>(info.curve.get())->stretch(info.index, tmp);
+                dynamic_cast<IPlanarCurve*>(info.curve.get())->stretch(info.index, tmp, ea);
         }
     }
 }
@@ -259,4 +262,57 @@ osg::Matrix PickStretchHandler::VPWmatrix(osg::Camera * cam)
     VPW.preMult(cam->getProjectionMatrix());
     VPW.preMult(cam->getViewMatrix());
     return  VPW;
+}
+
+bool PickStretchHandler::CollectControlPointsInViewport()
+{
+    m_controlPointsInViewport.clear();
+    osg::Camera* cam = m_pView->getCamera();
+    if (!cam)
+        return false;
+    auto viewport = cam->getViewport();
+    if (!viewport)
+        return false;
+    osg::Matrix VPW = VPWmatrix(cam);
+
+    auto root = m_pView->getSceneData();
+    if (!root)
+        return false;
+
+    osg::ref_ptr<ControlPointsInViewportIntersector> controlPointsPicker = new ControlPointsInViewportIntersector(m_controlPointsInViewport, VPW, viewport->x(), viewport->y(), viewport->width(), viewport->height());
+    osgUtil::IntersectionVisitor iv(controlPointsPicker.get());
+    iv.pushWindowMatrix(cam->getViewport());
+    iv.pushViewMatrix(new osg::RefMatrix(cam->getViewMatrix()));
+    iv.pushProjectionMatrix(new osg::RefMatrix(cam->getProjectionMatrix()));
+    iv.setTraversalMask(~HANDLE_NODE_MASK);
+    root->accept(iv);
+    return true;
+}
+
+void PickStretchHandler::SnapPoint(osg::Vec2d& pt/*in, out*/, const osg::NodePath& obj, const osg::Matrix& M, const osg::Matrix& invM, const osg::Matrix & VPW, const osg::Matrix& invVPW)
+{
+    auto ptInViewport = osg::Vec3d(pt, 0) * M * VPW;
+    for (const auto& curve : m_controlPointsInViewport)
+    {
+        // Don't snap control points on itself.
+        if (curve._obj == obj)
+            continue;
+        if (IsMatrixSamePlane(curve._matrix, M))
+        {
+            auto MVPW = curve._matrix * VPW;
+            for (const auto& cp : curve._controlPoints)
+            {
+                auto cpInViewport = osg::Vec3d(cp, 0) * MVPW;
+
+                if (abs(cpInViewport.x() - ptInViewport.x()) <= _offset && abs(cpInViewport.y() - ptInViewport.y()) <= _offset)
+                {
+                    auto snapPt = cpInViewport * invVPW * invM;
+                    pt.x() = snapPt.x();
+                    pt.y() = snapPt.y();
+                    // return on first snap, don't find the closest control point.
+                    return;
+                }
+            }
+        }
+    }
 }

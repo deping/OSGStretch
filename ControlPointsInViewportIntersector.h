@@ -2,23 +2,14 @@
 #include <osgUtil/IntersectionVisitor>
 #include <osg/Drawable>
 #include "IPlanarCurve.h"
+#include "ControlPointsInViewport.h"
 
-class CurveIntersector : public osgUtil::Intersector
+class ControlPointsInViewportIntersector : public osgUtil::Intersector
 {
 public:
-    struct Intersection
-    {
-        Intersection()
-            : depth(-1.0)
-        {}
-        bool operator < (const Intersection& rhs) const { return depth < rhs.depth; }
-        double                          depth;
-        osg::NodePath                   nodePath;
-        osg::Drawable*                   curve;
-    };
-    typedef std::multiset<Intersection> Intersections;
+    typedef std::vector<ControlPointsInViewport> Intersections;
 
-    CurveIntersector(Intersections& external, const osg::Matrix& vpw, double x, double y, double offset = 5);
+    ControlPointsInViewportIntersector(Intersections& external, const osg::Matrix& vpw, double x, double y, double w, double h);
 
     virtual Intersector* clone(osgUtil::IntersectionVisitor &iv);
 
@@ -30,13 +21,12 @@ public:
     virtual void intersect(osgUtil::IntersectionVisitor& iv, osg::Drawable* drawable) override;
 
     inline Intersections& getIntersections() { return _intersections; }
-    inline Intersection getFirstIntersection() { return _intersections.empty() ? Intersection() : *(_intersections.begin()); }
 
 protected:
 
     osg::Matrix _VPW;
-    double _screenX, _screenY;
-    double _offset;
+    // viewport extent
+    double _x1, _y1, _x2, _y2;
     // Use external variable to store intersections, because IntersectionVisitor::apply(osg::Transform& transform) will push_clone interceptor!!!
     // We will lose intersections if we use internal variables. very ugly!!!
     Intersections& _intersections;

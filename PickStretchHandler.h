@@ -1,9 +1,12 @@
 #pragma once
 
 #include <set>
+#include <vector>
 #include <osgGA/GUIEventHandler>
 #include <osgViewer/View>
 #include <osg/observer_ptr>
+
+#include "ControlPointsInViewport.h"
 
 class OsgControlPoints;
 // class to handle events with a pick
@@ -26,9 +29,12 @@ private:
     void releaseDraggedObject();
     void updateGripPoints();
     osg::Matrix VPWmatrix(osg::Camera* cam);
+    bool CollectControlPointsInViewport();
+    void SnapPoint(osg::Vec2d& pt/*in, out*/, const osg::NodePath& obj, const osg::Matrix& M, const osg::Matrix& invM, const osg::Matrix & VPW, const osg::Matrix& invVPW);
 
     osg::observer_ptr<osgViewer::View> m_pView;
     osg::ref_ptr<OsgControlPoints> m_gripPoints;
+    std::vector<ControlPointsInViewport> m_controlPointsInViewport;
     double _offset;
     EditMode _mode;
 };

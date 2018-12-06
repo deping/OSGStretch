@@ -60,6 +60,7 @@ int main(int, char**)
 
     root->addChild(createTest(osg::Matrix::identity(), osg::Vec4(0.5, 0.5, 0, 1), osg::Vec4(0, 0.5, 0.5, 1)));
     root->addChild(createTest(osg::Matrix::rotate(osg::PI_2, osg::X_AXIS), osg::Vec4(0.5, 0.5, 0, 1), osg::Vec4(0.5, 0, 0.5, 1)));
+    root->addChild(createTest(osg::Matrix::rotate(osg::PI_2, osg::X_AXIS) * osg::Matrix::translate(15, 0, 10), osg::Vec4(0.5, 0.5, 0, 1), osg::Vec4(0.5, 0, 0.5, 1)));
 
     root->getOrCreateStateSet()->setMode(GL_LIGHTING, osg::StateAttribute::OFF);
     root->getOrCreateStateSet()->setMode(GL_BLEND, osg::StateAttribute::ON);

@@ -25,7 +25,9 @@ set(HeaderFiles
     PointIntersector.h
     CurveIntersector.h
     OsgControlPoints.h
+    ControlPointsInViewport.h
     Line.h
+    ControlPointsInViewportIntersector.h
 	)
 set(SourceFiles
 	IPlanarCurve.cpp
@@ -36,12 +38,12 @@ set(SourceFiles
     CurveIntersector.cpp
     OsgControlPoints.cpp
     Line.cpp
+    ControlPointsInViewportIntersector.cpp
 	)
 set(ResourceFiles
 	)
 if(WIN32)
 list(APPEND HeaderFiles targetver.h stdafx.h)
-list(APPEND SourceFiles dllmain.cpp)
 endif()
 
 if(MSVC)

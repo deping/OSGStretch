@@ -6,8 +6,9 @@
 #include "IPlanarCurve.h"
 #include "Utility.h"
 
-CurveIntersector::CurveIntersector(Intersections& external, double x, double y, double offset)
+CurveIntersector::CurveIntersector(Intersections& external, const osg::Matrix& vpw, double x, double y, double offset)
     : osgUtil::Intersector(WINDOW)
+    , _VPW(vpw)
     , _screenX(x)
     , _screenY(y)
     , _offset(offset)
@@ -18,7 +19,7 @@ CurveIntersector::CurveIntersector(Intersections& external, double x, double y, 
 
 osgUtil::Intersector *CurveIntersector::clone(osgUtil::IntersectionVisitor &iv)
 {
-    osg::ref_ptr<CurveIntersector> cloned = new CurveIntersector(_intersections, _screenX, _screenY, _offset);
+    osg::ref_ptr<CurveIntersector> cloned = new CurveIntersector(_intersections, _VPW, _screenX, _screenY, _offset);
     return cloned.release();
 }
 
@@ -43,14 +44,9 @@ void CurveIntersector::intersect(osgUtil::IntersectionVisitor& iv, osg::Drawable
     auto pCurve = dynamic_cast<IPlanarCurve*>(drawable);
     if (!pCurve)
         return;
-    osg::Matrix* W = iv.getWindowMatrix();
-    osg::Matrix* P = iv.getProjectionMatrix();
-    osg::Matrix* V = iv.getViewMatrix();
     osg::Matrix* M = iv.getModelMatrix();
-    if (!W || !P || !V)
-        return;
     osg::Vec3d xpt;
-    osg::Matrix VPW = *V * *P * *W;
+    const osg::Matrix& VPW = _VPW;
     osg::Matrix invVPW = osg::Matrix::inverse(VPW);
     osg::Matrix m = M ? *M : osg::computeLocalToWorld(iv.getNodePath());
     bool success = XPointPlane(_screenX, _screenY, invVPW, m, xpt);

@@ -76,7 +76,7 @@ void Line::getControlPoints(std::vector<GripPoint>& points) const
     }
 }
 
-void Line::stretch(int index, const osg::Vec2d & pos)
+void Line::stretch(int index, const osg::Vec2d & pos, const osgGA::GUIEventAdapter& ea)
 {
     (*_points)[index] = pos;
     _points->dirty();
