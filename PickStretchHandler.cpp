@@ -195,10 +195,12 @@ void PickStretchHandler::stretch(const osgGA::GUIEventAdapter & ea, bool clone)
     }
 }
 
-osg::Group* getParent(const osg::NodePath& nodePath)
+osg::Group* getParent(const osg::NodePath& nodePath, const osg::Node* node)
 {
     for (auto it = nodePath.rbegin(); it != nodePath.rend(); ++it)
     {
+        if (*it == node)
+            continue;
         auto group = (*it)->asGroup();
         if (group)
             return group;
@@ -214,9 +216,9 @@ void PickStretchHandler::cloneDraggedObject()
         auto& info = it->second;
         if (info.index != -1)
         {
-            auto parent = getParent(it->first);
-            assert(parent);
             auto node = info.curve.get();
+            auto parent = getParent(it->first, node);
+            assert(parent);
             osg::ref_ptr<osg::Object> clone = node->clone(osg::CopyOp::DEEP_COPY_ALL);
             auto curve2 = dynamic_cast<IPlanarCurve*>(clone.get());
             if (curve2)
@@ -238,7 +240,7 @@ void PickStretchHandler::releaseDraggedObject()
         auto& info = it->second;
         if (info.clone.valid())
         {
-            auto parent = getParent(it->first);
+            auto parent = getParent(it->first, info.clone.get());
             assert(parent);
             parent->removeChild(info.clone);
             info.clone = nullptr;
