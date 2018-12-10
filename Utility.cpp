@@ -67,6 +67,11 @@ bool getViewProjectionWindowMatrix(const osgGA::GUIActionAdapter &aa, osg::Matri
     if (!view)
         return false;
     const osg::Camera* camera = view->getCamera();
+    return getCameraProjectionWindowMatrix(camera, VPW, invVPW);
+}
+
+bool getCameraProjectionWindowMatrix(const osg::Camera* camera, osg::Matrix &VPW, osg::Matrix &invVPW)
+{
     if (!camera)
         return false;
     if (!camera->getViewport())

@@ -28,5 +28,6 @@ PlaneON getPlane(const osg::Matrix& matrix);
 bool XPointPlane(double screenX, double screenY, const osg::Matrix & invVPW, const osg::Matrix& matrix, osg::Vec3d& res);
 bool XPointPlane(const osgGA::GUIEventAdapter& ea, const osgGA::GUIActionAdapter & aa, const osg::Matrix& matrix, osg::Vec3d& res);
 bool getViewProjectionWindowMatrix(const osgGA::GUIActionAdapter &aa, osg::Matrix &VPW, osg::Matrix &invVPW);
+bool getCameraProjectionWindowMatrix(const osg::Camera* camera, osg::Matrix &VPW, osg::Matrix &invVPW);
 osg::Vec2d Nearest(const osg::Vec2d & p, const osg::Vec2d& s, const osg::Vec2d& e);
 bool IsMatrixSamePlane(const osg::Matrix & m1, const osg::Matrix & m2);
