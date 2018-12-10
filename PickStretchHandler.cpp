@@ -10,20 +10,20 @@
 #include "OsgControlPoints.h"
 
 
-PickStretchHandler::PickStretchHandler(osgViewer::View* pView, double offset)
-    : m_pView(pView)
+PickStretchHandler::PickStretchHandler(osg::Camera* camera, osg::Node* node, double offset)
+    : m_pCamera(camera)
     , m_gripPoints(new OsgControlPoints)
     , _offset(offset)
     , _mode(EditMode::None)
 {
     assert(offset >= 3);
-    assert(m_pView.valid());
-    auto root = m_pView->getSceneData();
-    assert(root);
-    root->getOrCreateStateSet()->setAttribute(new osg::Point(10));
-    auto group = root->asGroup();
+    assert(m_pCamera.valid());
+    assert(node);
+    auto group = node->asGroup();
     assert(group);
     assert(!group->asTransform());
+    m_pSceneData = group;
+    group->getOrCreateStateSet()->setAttribute(new osg::Point(10));
     auto geode = new osg::Geode;
     group->addChild(geode);
     geode->addDrawable(m_gripPoints);
@@ -33,25 +33,22 @@ PickStretchHandler::PickStretchHandler(osgViewer::View* pView, double offset)
 
 PickStretchHandler::~PickStretchHandler()
 {
-    auto pView = lock(m_pView);
-    if (pView.valid())
+    auto camera = lock(m_pCamera);
+    if (camera.valid())
     {
-        pView->removeEventHandler(this);
+        camera->removeEventCallback(this);
     }
-    m_pView = nullptr;
+    m_pCamera = nullptr;
 }
 
 bool PickStretchHandler::handle(const osgGA::GUIEventAdapter& ea, osgGA::GUIActionAdapter& aa)
 {
-    osgViewer::View* view = dynamic_cast<osgViewer::View*>(&aa);
-    if (!view)
-        return false;
     switch (ea.getEventType())
     {
     case(osgGA::GUIEventAdapter::PUSH):
         if (ea.getButton() == osgGA::GUIEventAdapter::LEFT_MOUSE_BUTTON)
         {
-            if (pick(view, ea))
+            if (pick(ea))
             {
                 _mode = EditMode::DragPoint;
                 CollectControlPointsInViewport();
@@ -68,7 +65,7 @@ bool PickStretchHandler::handle(const osgGA::GUIEventAdapter& ea, osgGA::GUIActi
             {
                 _mode = EditMode::None;
                 releaseDraggedObject();
-                stretch(view, ea, false);
+                stretch(ea, false);
                 updateGripPoints();
                 return true;
             }
@@ -79,7 +76,7 @@ bool PickStretchHandler::handle(const osgGA::GUIEventAdapter& ea, osgGA::GUIActi
         {
             if (_mode == EditMode::DragPoint)
             {
-                stretch(view, ea, true);
+                stretch(ea, true);
                 return true;
             }
         }
@@ -105,9 +102,9 @@ bool PickStretchHandler::handle(const osgGA::GUIEventAdapter& ea, osgGA::GUIActi
     return false;
 }
 
-bool PickStretchHandler::pick(osgViewer::View* view, const osgGA::GUIEventAdapter& ea)
+bool PickStretchHandler::pick(const osgGA::GUIEventAdapter& ea)
 {
-    osg::Camera* cam = view->getCamera();
+    auto cam = lock(m_pCamera);
     if (!cam)
         return false;
     if (!cam->getViewport())
@@ -125,18 +122,14 @@ bool PickStretchHandler::pick(osgViewer::View* view, const osgGA::GUIEventAdapte
         }
     }
 
-    auto root = m_pView->getSceneData();
+    auto root = lock(m_pSceneData);
     if (!root)
         return false;
 
-    CurveIntersector::Intersections selectionSet;
-    osg::ref_ptr<CurveIntersector> curvePicker = new CurveIntersector(selectionSet, VPW, ea.getX(), ea.getY(), _offset);
-    osgUtil::IntersectionVisitor iv(curvePicker.get());
-    iv.pushWindowMatrix(cam->getViewport());
-    iv.pushViewMatrix(new osg::RefMatrix(cam->getViewMatrix()));
-    iv.pushProjectionMatrix(new osg::RefMatrix(cam->getProjectionMatrix()));
-    iv.setTraversalMask(~HANDLE_NODE_MASK);
-    root->accept(iv);
+    PlanarCurveVisitor::Intersections selectionSet;
+    PlanarCurveVisitor curvePicker(selectionSet, VPW, ea.getX(), ea.getY(), _offset);
+    curvePicker.setTraversalMask(~HANDLE_NODE_MASK);
+    root->accept(curvePicker);
 
     // IntersectionVisitor::apply(osg::Transform& transform) will push_clone interceptor!!!
     //auto& selectionSet = curvePicker->getIntersections();
@@ -170,10 +163,10 @@ bool PickStretchHandler::pick(osgViewer::View* view, const osgGA::GUIEventAdapte
     return false;
 }
 
-void PickStretchHandler::stretch(osgViewer::View * view, const osgGA::GUIEventAdapter & ea, bool clone)
+void PickStretchHandler::stretch(const osgGA::GUIEventAdapter & ea, bool clone)
 {
-    osg::Camera* cam = view->getCamera();
-    if (!cam)
+    osg::ref_ptr<osg::Camera> cam = lock(m_pCamera);
+    if (!cam.valid())
         return;
     if (!cam->getViewport())
         return;
@@ -202,6 +195,17 @@ void PickStretchHandler::stretch(osgViewer::View * view, const osgGA::GUIEventAd
     }
 }
 
+osg::Group* getParent(const osg::NodePath& nodePath)
+{
+    for (auto it = nodePath.rbegin(); it != nodePath.rend(); ++it)
+    {
+        auto group = (*it)->asGroup();
+        if (group)
+            return group;
+    }
+    return nullptr;
+}
+
 void PickStretchHandler::cloneDraggedObject()
 {
     auto& curSelectionSet = m_gripPoints->_selectionSet;
@@ -210,17 +214,16 @@ void PickStretchHandler::cloneDraggedObject()
         auto& info = it->second;
         if (info.index != -1)
         {
-            auto parent = it->first.back();
+            auto parent = getParent(it->first);
             assert(parent);
-            auto geode = parent->asGeode();
-            assert(geode);
             auto node = info.curve.get();
             osg::ref_ptr<osg::Object> clone = node->clone(osg::CopyOp::DEEP_COPY_ARRAYS);
             auto curve2 = dynamic_cast<IPlanarCurve*>(clone.get());
             if (curve2)
             {
-                info.clone = dynamic_cast<osg::Drawable*>(curve2);
-                geode->addDrawable(info.clone);
+                info.clone = dynamic_cast<osg::Node*>(curve2);
+                // Geode::addDrawable == Group::addChild
+                parent->addChild(info.clone);
                 //geode->setDataVariance(osg::Object::DYNAMIC);
             }
         }
@@ -235,11 +238,9 @@ void PickStretchHandler::releaseDraggedObject()
         auto& info = it->second;
         if (info.clone.valid())
         {
-            auto parent = it->first.back();
+            auto parent = getParent(it->first);
             assert(parent);
-            auto geode = parent->asGeode();
-            assert(geode);
-            geode->removeDrawable(info.clone);
+            parent->removeChild(info.clone);
             info.clone = nullptr;
         }
     }
@@ -267,15 +268,15 @@ osg::Matrix PickStretchHandler::VPWmatrix(osg::Camera * cam)
 bool PickStretchHandler::CollectControlPointsInViewport()
 {
     m_controlPointsInViewport.clear();
-    osg::Camera* cam = m_pView->getCamera();
-    if (!cam)
+    auto cam = lock(m_pCamera);
+    if (!cam.valid())
         return false;
     auto viewport = cam->getViewport();
     if (!viewport)
         return false;
     osg::Matrix VPW = VPWmatrix(cam);
 
-    auto root = m_pView->getSceneData();
+    auto root = lock(m_pSceneData);
     if (!root)
         return false;
 

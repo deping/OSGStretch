@@ -1,9 +1,9 @@
 #pragma once
-#include <osgUtil/IntersectionVisitor>
+#include <osg/NodeVisitor>
 #include <osg/Drawable>
 #include "IPlanarCurve.h"
 
-class CurveIntersector : public osgUtil::Intersector
+class PlanarCurveVisitor : public osg::NodeVisitor
 {
 public:
     struct Intersection
@@ -14,20 +14,15 @@ public:
         bool operator < (const Intersection& rhs) const { return depth < rhs.depth; }
         double                          depth;
         osg::NodePath                   nodePath;
-        osg::Drawable*                   curve;
+        osg::Node*                   curve;
     };
     typedef std::multiset<Intersection> Intersections;
 
-    CurveIntersector(Intersections& external, const osg::Matrix& vpw, double x, double y, double offset = 5);
+    PlanarCurveVisitor(Intersections& external, const osg::Matrix& vpw, double x, double y, double offset = 5);
 
-    virtual Intersector* clone(osgUtil::IntersectionVisitor &iv);
+    bool containsIntersections();
 
-    virtual bool enter(const osg::Node& node) override;
-    virtual void leave() override;
-
-    virtual bool containsIntersections() override;
-
-    virtual void intersect(osgUtil::IntersectionVisitor& iv, osg::Drawable* drawable) override;
+    virtual void apply(osg::Node& node) override;
 
     inline Intersections& getIntersections() { return _intersections; }
     inline Intersection getFirstIntersection() { return _intersections.empty() ? Intersection() : *(_intersections.begin()); }

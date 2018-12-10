@@ -1,5 +1,9 @@
 #pragma once
+
+#include <osg/Geometry>
+
 #include "IPlanarCurve.h"
+
 class Line : public osg::Geometry, public IPlanarCurve
 {
 public:

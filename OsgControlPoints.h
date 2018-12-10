@@ -3,14 +3,16 @@
 #include <list>
 
 #include <osg/Geode>
+#include <osg/Geometry>
+
 #include "IPlanarCurve.h"
 typedef osg::TemplateArray<GLbyte, osg::Array::ByteArrayType, 1, GL_BYTE> NotIndexByteArray;
 
 struct IPlanarCurve;
 struct SelectedCurveInfo
 {
-    osg::observer_ptr<osg::Drawable> curve;
-    osg::ref_ptr<osg::Drawable> clone;
+    osg::observer_ptr<osg::Node> curve;
+    osg::ref_ptr<osg::Node> clone;
     std::vector<GripPoint> controlPoints;
     //osg::Vec3d hitPoint; // local coordinate
     int index;

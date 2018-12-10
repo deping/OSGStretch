@@ -56,7 +56,7 @@ int main(int, char**)
 
     osg::ref_ptr<osg::Group> root = new osg::Group();
     viewer.setSceneData(root.get());
-    EnableStretch(&viewer, 5);
+    EnableStretch(viewer.getCamera(), 5);
 
     root->addChild(createTest(osg::Matrix::identity(), osg::Vec4(0.5, 0.5, 0, 1), osg::Vec4(0, 0.5, 0.5, 1)));
     root->addChild(createTest(osg::Matrix::rotate(osg::PI_2, osg::X_AXIS), osg::Vec4(0.5, 0.5, 0, 1), osg::Vec4(0.5, 0, 0.5, 1)));

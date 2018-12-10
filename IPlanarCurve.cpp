@@ -1,25 +1,48 @@
 #include "stdafx.h"
 
+#include <assert.h>
+
 //#include <algorithm>
 #include <numeric>
+
+#include <osgViewer/View>
+
 #include "IPlanarCurve.h"
 #include "PickStretchHandler.h"
 
-void EnableStretch(osgViewer::View * pView, double offset)
+void EnableStretch(osg::Camera* camera, double offset)
 {
-    if (!pView)
+    if (!camera)
         return;
-    auto pNode = pView->getSceneData();
-    if (!pNode)
+    auto view = dynamic_cast<osgViewer::View*>(camera->getView());
+    if (!view)
         return;
-    auto handlers = pView->getEventHandlers();
-    for (auto handler : handlers)
+    osg::View::Slave* slave = view->findSlaveForCamera(camera);
+    osg::Node* node;
+    if (slave)
     {
-        auto picker = dynamic_cast<PickStretchHandler*>(handler.get());
-        if (picker)
-        {
-            return;
-        }
+        assert(camera->getNumChildren() == 1);
+        node = camera->getChild(0);
     }
-    pView->addEventHandler(new PickStretchHandler(pView, offset));
+    else
+    {
+        node = view->getSceneData();
+    }
+    if (!node)
+        return;
+    auto cb = camera->getEventCallback();
+    bool  found = false;
+    while (cb)
+    {
+        if (dynamic_cast<PickStretchHandler*>(cb))
+        {
+            found = true;
+            break;
+        }
+        cb = cb->getNestedCallback();
+    }
+    if (!found)
+    {
+        camera->addEventCallback(new PickStretchHandler(camera, node, offset));
+    }
 }

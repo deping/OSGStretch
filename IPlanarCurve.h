@@ -5,7 +5,8 @@
 #include <osg/Geode>
 #include <osg/NodeCallback>
 #include <osg/OperationThread>
-#include <osgViewer/View>
+#include <osg/Camera>
+#include <osgGA/GUIEventAdapter>
 
 enum class GripType : char
 {
@@ -31,4 +32,4 @@ struct IPlanarCurve
 
 const osg::Node::NodeMask HANDLE_NODE_MASK = 0x40000;
 
-void EnableStretch(osgViewer::View* pView, double offset = 5);
+void EnableStretch(osg::Camera* camera, double offset = 5);

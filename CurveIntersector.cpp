@@ -6,8 +6,8 @@
 #include "IPlanarCurve.h"
 #include "Utility.h"
 
-CurveIntersector::CurveIntersector(Intersections& external, const osg::Matrix& vpw, double x, double y, double offset)
-    : osgUtil::Intersector(WINDOW)
+PlanarCurveVisitor::PlanarCurveVisitor(Intersections& external, const osg::Matrix& vpw, double x, double y, double offset)
+    : osg::NodeVisitor(TRAVERSE_ALL_CHILDREN)
     , _VPW(vpw)
     , _screenX(x)
     , _screenY(y)
@@ -17,54 +17,44 @@ CurveIntersector::CurveIntersector(Intersections& external, const osg::Matrix& v
     assert(offset >= 3.0);
 }
 
-osgUtil::Intersector *CurveIntersector::clone(osgUtil::IntersectionVisitor &iv)
-{
-    osg::ref_ptr<CurveIntersector> cloned = new CurveIntersector(_intersections, _VPW, _screenX, _screenY, _offset);
-    return cloned.release();
-}
-
-bool CurveIntersector::enter(const osg::Node& node)
-{
-    if (reachedLimit()) return false;
-    return true;// !node.isCullingActive();
-}
-
-void CurveIntersector::leave()
-{
-    // do nothing
-}
-
-bool CurveIntersector::containsIntersections()
+bool PlanarCurveVisitor::containsIntersections()
 {
     return !_intersections.empty();
 }
 
-void CurveIntersector::intersect(osgUtil::IntersectionVisitor& iv, osg::Drawable* drawable)
+void PlanarCurveVisitor::apply(osg::Node& node)
 {
-    auto pCurve = dynamic_cast<IPlanarCurve*>(drawable);
-    if (!pCurve)
-        return;
-    osg::Matrix* M = iv.getModelMatrix();
-    osg::Vec3d xpt;
-    const osg::Matrix& VPW = _VPW;
-    osg::Matrix invVPW = osg::Matrix::inverse(VPW);
-    osg::Matrix m = M ? *M : osg::computeLocalToWorld(iv.getNodePath());
-    bool success = XPointPlane(_screenX, _screenY, invVPW, m, xpt);
-    if (!success)
-        return;
-    osg::Matrix invM = osg::Matrix::inverse(m);
-    osg::Vec3d localXpt = xpt * invM;
-    osg::Vec2d nearestPt;
-    success = pCurve->nearest(osg::Vec2d(localXpt.x(), localXpt.y()), nearestPt);
-    if (!success)
-        return;
-    auto nearestPtInWindow = osg::Vec3d(nearestPt, 0) * m * VPW;
-    if (abs(nearestPtInWindow.x() - _screenX) <= _offset && abs(nearestPtInWindow.y() - _screenY) <= _offset)
+    auto pCurve = dynamic_cast<IPlanarCurve*>(&node);
+    if (pCurve)
     {
-        Intersection x;
-        x.depth = nearestPtInWindow.z();
-        x.nodePath = iv.getNodePath();
-        x.curve = drawable;
-        _intersections.insert(x);
+        osg::Vec3d xpt;
+        const osg::Matrix& VPW = _VPW;
+        osg::Matrix invVPW = osg::Matrix::inverse(VPW);
+        auto nodePath = getNodePath();
+        osg::Matrix m = osg::computeLocalToWorld(nodePath);
+        bool success = XPointPlane(_screenX, _screenY, invVPW, m, xpt);
+        if (!success)
+            return;
+        osg::Matrix invM = osg::Matrix::inverse(m);
+        osg::Vec3d localXpt = xpt * invM;
+        osg::Vec2d nearestPt;
+        success = pCurve->nearest(osg::Vec2d(localXpt.x(), localXpt.y()), nearestPt);
+        if (!success)
+            return;
+        auto nearestPtInWindow = osg::Vec3d(nearestPt, 0) * m * VPW;
+        if (abs(nearestPtInWindow.x() - _screenX) <= _offset && abs(nearestPtInWindow.y() - _screenY) <= _offset)
+        {
+            Intersection x;
+            x.depth = nearestPtInWindow.z();
+            x.nodePath = nodePath;
+            x.curve = &node;
+            _intersections.insert(x);
+        }
+        // Don't traverse its children.
+    }
+    else
+    {
+        traverse(node);
+        return;
     }
 }
