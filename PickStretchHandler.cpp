@@ -217,7 +217,7 @@ void PickStretchHandler::cloneDraggedObject()
             auto parent = getParent(it->first);
             assert(parent);
             auto node = info.curve.get();
-            osg::ref_ptr<osg::Object> clone = node->clone(osg::CopyOp::DEEP_COPY_ARRAYS);
+            osg::ref_ptr<osg::Object> clone = node->clone(osg::CopyOp::DEEP_COPY_ALL);
             auto curve2 = dynamic_cast<IPlanarCurve*>(clone.get());
             if (curve2)
             {
