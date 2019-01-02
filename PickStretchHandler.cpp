@@ -179,6 +179,14 @@ void PickStretchHandler::stretch(const osgGA::GUIEventAdapter & ea, bool clone)
         auto curve = lock(info.curve);
         if (!curve.valid())
         {
+            if (info.clone.valid())
+            {
+                auto pa = info.clone->getParents();
+                if (!pa.empty())
+                {
+                    pa[0]->removeChild(info.clone.get());
+                }
+            }
             it = curSelectionSet.erase(it);
             continue;
         }
@@ -226,6 +234,14 @@ void PickStretchHandler::cloneDraggedObject()
         auto curve = lock(info.curve);
         if (!curve.valid())
         {
+            if (info.clone.valid())
+            {
+                auto pa = info.clone->getParents();
+                if (!pa.empty())
+                {
+                    pa[0]->removeChild(info.clone.get());
+                }
+            }
             it = curSelectionSet.erase(it);
             continue;
         }
@@ -275,6 +291,14 @@ void PickStretchHandler::updateGripPoints()
         auto curve = lock(info.curve);
         if (!curve.valid())
         {
+            if (info.clone.valid())
+            {
+                auto pa = info.clone->getParents();
+                if (!pa.empty())
+                {
+                    pa[0]->removeChild(info.clone.get());
+                }
+            }
             it = curSelectionSet.erase(it);
             continue;
         }
