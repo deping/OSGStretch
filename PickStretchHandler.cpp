@@ -173,9 +173,16 @@ void PickStretchHandler::stretch(const osgGA::GUIEventAdapter & ea, bool clone)
     osg::Matrix VPW = VPWmatrix(cam);
     osg::Matrix invVPW = osg::Matrix::inverse(VPW);
     auto& curSelectionSet = m_gripPoints->_selectionSet;
-    for (auto it = curSelectionSet.begin(); it != curSelectionSet.end(); ++it)
+    for (auto it = curSelectionSet.begin(); it != curSelectionSet.end(); /*++it*/)
     {
         auto& info = it->second;
+        auto curve = lock(info.curve);
+        if (!curve.valid())
+        {
+            it = curSelectionSet.erase(it);
+            continue;
+        }
+
         if (info.index != -1)
         {
             osg::Matrix m = osg::computeLocalToWorld(it->first);
@@ -192,6 +199,8 @@ void PickStretchHandler::stretch(const osgGA::GUIEventAdapter & ea, bool clone)
             else
                 dynamic_cast<IPlanarCurve*>(info.curve.get())->stretch(info.index, tmp, ea);
         }
+
+        ++it;
     }
 }
 
@@ -211,9 +220,16 @@ osg::Group* getParent(const osg::NodePath& nodePath, const osg::Node* node)
 void PickStretchHandler::cloneDraggedObject()
 {
     auto& curSelectionSet = m_gripPoints->_selectionSet;
-    for (auto it = curSelectionSet.begin(); it != curSelectionSet.end(); ++it)
+    for (auto it = curSelectionSet.begin(); it != curSelectionSet.end(); /*++it*/)
     {
         auto& info = it->second;
+        auto curve = lock(info.curve);
+        if (!curve.valid())
+        {
+            it = curSelectionSet.erase(it);
+            continue;
+        }
+
         if (info.index != -1)
         {
             auto node = info.curve.get();
@@ -229,6 +245,8 @@ void PickStretchHandler::cloneDraggedObject()
                 //geode->setDataVariance(osg::Object::DYNAMIC);
             }
         }
+
+        ++it;
     }
 }
 
@@ -251,10 +269,19 @@ void PickStretchHandler::releaseDraggedObject()
 void PickStretchHandler::updateGripPoints()
 {
     auto& curSelectionSet = m_gripPoints->_selectionSet;
-    for (auto it = curSelectionSet.begin(); it != curSelectionSet.end(); ++it)
+    for (auto it = curSelectionSet.begin(); it != curSelectionSet.end(); /*++it*/)
     {
         auto& info = it->second;
+        auto curve = lock(info.curve);
+        if (!curve.valid())
+        {
+            it = curSelectionSet.erase(it);
+            continue;
+        }
+
         dynamic_cast<IPlanarCurve*>(info.curve.get())->getControlPoints(info.controlPoints);
+
+        ++it;
     }
     m_gripPoints->build();
 }
