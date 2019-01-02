@@ -110,6 +110,7 @@ bool PickStretchHandler::pick(const osgGA::GUIEventAdapter& ea)
     if (!cam->getViewport())
         return false;
     osg::Matrix VPW = VPWmatrix(cam);
+    m_gripPoints->removeInvalidSelections();
     if (!m_gripPoints->_selectionSet.empty())
     {
         PointIntersector pointPicker(ea.getX(), ea.getY(), _offset);
@@ -172,25 +173,11 @@ void PickStretchHandler::stretch(const osgGA::GUIEventAdapter & ea, bool clone)
         return;
     osg::Matrix VPW = VPWmatrix(cam);
     osg::Matrix invVPW = osg::Matrix::inverse(VPW);
+    m_gripPoints->removeInvalidSelections();
     auto& curSelectionSet = m_gripPoints->_selectionSet;
-    for (auto it = curSelectionSet.begin(); it != curSelectionSet.end(); /*++it*/)
+    for (auto it = curSelectionSet.begin(); it != curSelectionSet.end(); ++it)
     {
         auto& info = it->second;
-        auto curve = lock(info.curve);
-        if (!curve.valid())
-        {
-            if (info.clone.valid())
-            {
-                auto pa = info.clone->getParents();
-                if (!pa.empty())
-                {
-                    pa[0]->removeChild(info.clone.get());
-                }
-            }
-            it = curSelectionSet.erase(it);
-            continue;
-        }
-
         if (info.index != -1)
         {
             osg::Matrix m = osg::computeLocalToWorld(it->first);
@@ -207,8 +194,6 @@ void PickStretchHandler::stretch(const osgGA::GUIEventAdapter & ea, bool clone)
             else
                 dynamic_cast<IPlanarCurve*>(info.curve.get())->stretch(info.index, tmp, ea);
         }
-
-        ++it;
     }
 }
 
@@ -227,25 +212,11 @@ osg::Group* getParent(const osg::NodePath& nodePath, const osg::Node* node)
 
 void PickStretchHandler::cloneDraggedObject()
 {
+    m_gripPoints->removeInvalidSelections();
     auto& curSelectionSet = m_gripPoints->_selectionSet;
-    for (auto it = curSelectionSet.begin(); it != curSelectionSet.end(); /*++it*/)
+    for (auto it = curSelectionSet.begin(); it != curSelectionSet.end(); ++it)
     {
         auto& info = it->second;
-        auto curve = lock(info.curve);
-        if (!curve.valid())
-        {
-            if (info.clone.valid())
-            {
-                auto pa = info.clone->getParents();
-                if (!pa.empty())
-                {
-                    pa[0]->removeChild(info.clone.get());
-                }
-            }
-            it = curSelectionSet.erase(it);
-            continue;
-        }
-
         if (info.index != -1)
         {
             auto node = info.curve.get();
@@ -261,13 +232,12 @@ void PickStretchHandler::cloneDraggedObject()
                 //geode->setDataVariance(osg::Object::DYNAMIC);
             }
         }
-
-        ++it;
     }
 }
 
 void PickStretchHandler::releaseDraggedObject()
 {
+    m_gripPoints->removeInvalidSelections();
     auto& curSelectionSet = m_gripPoints->_selectionSet;
     for (auto it = curSelectionSet.begin(); it != curSelectionSet.end(); ++it)
     {
@@ -284,28 +254,12 @@ void PickStretchHandler::releaseDraggedObject()
 
 void PickStretchHandler::updateGripPoints()
 {
+    m_gripPoints->removeInvalidSelections();
     auto& curSelectionSet = m_gripPoints->_selectionSet;
-    for (auto it = curSelectionSet.begin(); it != curSelectionSet.end(); /*++it*/)
+    for (auto it = curSelectionSet.begin(); it != curSelectionSet.end(); ++it)
     {
         auto& info = it->second;
-        auto curve = lock(info.curve);
-        if (!curve.valid())
-        {
-            if (info.clone.valid())
-            {
-                auto pa = info.clone->getParents();
-                if (!pa.empty())
-                {
-                    pa[0]->removeChild(info.clone.get());
-                }
-            }
-            it = curSelectionSet.erase(it);
-            continue;
-        }
-
         dynamic_cast<IPlanarCurve*>(info.curve.get())->getControlPoints(info.controlPoints);
-
-        ++it;
     }
     m_gripPoints->build();
 }

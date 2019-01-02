@@ -20,6 +20,7 @@ bool PointIntersector::intersect(const osg::Matrixd& VPW, OsgControlPoints* p)
     osg::Matrix invVPW = osg::Matrix::inverse(VPW);
     osg::Vec3d hitPoint;
     osg::Matrix matrix;
+    p->removeInvalidSelections();
     auto& selectSet = p->_selectionSet;
     int hitCount = 0;
     for (auto it = selectSet.begin(); it != selectSet.end(); ++it)

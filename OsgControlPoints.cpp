@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "OsgControlPoints.h"
+#include "Utility.h"
 
 
 OsgControlPoints::OsgControlPoints()
@@ -54,4 +55,28 @@ void OsgControlPoints::build()
 void OsgControlPoints::RemoveNode(const osg::NodePath & node)
 {
     _selectionSet.erase(node);
+}
+
+void OsgControlPoints::removeInvalidSelections()
+{
+    auto& curSelectionSet = _selectionSet;
+    for (auto it = curSelectionSet.begin(); it != curSelectionSet.end(); /*++it*/)
+    {
+        auto& info = it->second;
+        auto curve = lock(info.curve);
+        if (!curve.valid())
+        {
+            if (info.clone.valid())
+            {
+                auto pa = info.clone->getParents();
+                if (!pa.empty())
+                {
+                    pa[0]->removeChild(info.clone.get());
+                }
+            }
+            it = curSelectionSet.erase(it);
+            continue;
+        }
+        ++it;
+    }
 }

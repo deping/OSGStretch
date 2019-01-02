@@ -27,6 +27,7 @@ public:
     void build();
     void RemoveNode(const osg::NodePath& node);
     std::map<osg::NodePath, SelectedCurveInfo> _selectionSet;
+    void removeInvalidSelections();
 
 private:
     osg::ref_ptr<NotIndexByteArray> _types;
