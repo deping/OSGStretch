@@ -111,17 +111,6 @@ bool PickStretchHandler::pick(const osgGA::GUIEventAdapter& ea)
         return false;
     osg::Matrix VPW = VPWmatrix(cam);
     m_gripPoints->removeInvalidSelections();
-    if (!m_gripPoints->_selectionSet.empty())
-    {
-        PointIntersector pointPicker(ea.getX(), ea.getY(), _offset);
-        bool hit = pointPicker.intersect(VPW, m_gripPoints.get());
-        // If any control point is hit, return in order not to select curve.
-        if (hit)
-        {
-            m_gripPoints->build();
-            return true;
-        }
-    }
 
     auto root = lock(m_pSceneData);
     if (!root)
@@ -161,6 +150,18 @@ bool PickStretchHandler::pick(const osgGA::GUIEventAdapter& ea)
         }
     }
     updateGripPoints();
+
+    if (!m_gripPoints->_selectionSet.empty())
+    {
+        PointIntersector pointPicker(ea.getX(), ea.getY(), _offset);
+        bool hit = pointPicker.intersect(VPW, m_gripPoints.get());
+        // If any control point is hit, return in order not to select curve.
+        if (hit)
+        {
+            m_gripPoints->build();
+            return true;
+        }
+    }
     return false;
 }
 
