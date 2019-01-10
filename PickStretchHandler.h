@@ -38,5 +38,7 @@ private:
     std::vector<ControlPointsInViewport> m_controlPointsInViewport;
     double _offset;
     EditMode _mode;
+
+    friend std::vector<osg::NodePath> GetStretchSelections(osg::Camera * camera);
 };
 

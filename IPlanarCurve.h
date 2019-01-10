@@ -33,3 +33,5 @@ struct IPlanarCurve
 const osg::Node::NodeMask HANDLE_NODE_MASK = 0x40000;
 
 void EnableStretch(osg::Camera* camera, double offset = 5);
+
+std::vector<osg::NodePath> GetStretchSelections(osg::Camera* camera);
